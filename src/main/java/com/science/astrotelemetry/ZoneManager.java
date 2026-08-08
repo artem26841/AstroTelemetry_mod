@@ -51,7 +51,7 @@ public class ZoneManager {
         zones.clear();
         if (!configFile.exists()) {
             // ИСПРАВЛЕНО: имя, X, Z, радиус (6), минимальная высота Y (по умолчанию 60)
-            addZone(new TelemetryZone("Главный Институт", 0, 0, 6, 60.0));
+            addZone(new TelemetryZone("Главный Институт", 0, 0, 0, 50.0, 256.0));
             return;
         }
 

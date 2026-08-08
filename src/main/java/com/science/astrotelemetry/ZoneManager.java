@@ -50,8 +50,8 @@ public class ZoneManager {
     public static void loadZones() {
         zones.clear();
         if (!configFile.exists()) {
-            // Если файла нет, создаем тестовую зону по умолчанию на спавне
-            addZone(new TelemetryZone("Центральная Обсерватория", 0, 0, 6, 1420.4, "РТ-70"));
+            // ИСПРАВЛЕНО: имя, X, Z, радиус (6), минимальная высота Y (по умолчанию 60)
+            addZone(new TelemetryZone("Центральная Лаборатория", 0, 0, 6, 60.0));
             return;
         }
 

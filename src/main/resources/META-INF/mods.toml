@@ -21,6 +21,6 @@ side="CLIENT"
 [[dependencies.astrotelemetry]]
 modId="minecraft"
 mandatory=true
-versionRange=""
+versionRange="1.20.1"
 ordering="NONE"
 side="CLIENT"

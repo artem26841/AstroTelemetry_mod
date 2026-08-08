@@ -33,17 +33,17 @@ public class TelemetryHud {
         int screenHeight = graphics.guiHeight();
 
         long gameTime = player.level().getGameTime();
-        int textColor = 0xFF00FF00; // Яркий зеленый матричный цвет
+        int textColor = 0xFF00FF00; // Зеленый матричный цвет
 
-        // 1. Позиция по вертикали: над инвентарем
+        // Позиция по вертикали над инвентарем
         int y = screenHeight - 55; 
 
-        // 2. ОТРИСОВКА СТАТИЧНОЙ СТРОКИ 1 (Название терминала)
+        // СТРОКА 1: Статичное название главного компьютера
         String titleText = "[ ЦВМ БОРТ-КОМПЬЮТЕР V1.2 ]";
         int titleX = screenWidth / 2 - font.width(titleText) / 2;
         graphics.drawString(font, titleText, titleX, y, textColor, false);
 
-        // 3. СБОР ДАННЫХ ДЛЯ СТРОКИ 2 (Бегущая строка)
+        // СТРОКА 2: Сбор всех данных в одну новостную ленту в ряд
         double noise = (gameTime % 20 == 0) ? Math.random() * 0.02 : 0.005;
         int rainPercent = (int)(player.level().getRainLevel(1.0F) * 100);
         
@@ -51,30 +51,27 @@ public class TelemetryHud {
                           " -> [ВЫСОТА]: " + String.format("%.1f", player.getY()) + "м" +
                           " -> [ЧАСТОТА]: " + String.format("%.4f", 1420.4 + noise) + " MHz" +
                           " -> [ПОГОДА]: ИСКАЖЕНИЕ " + rainPercent + "%" +
-                          " -> [ТЕЛЕМЕТРИЯ]: ДАННЫЕ СТАБИЛЬНЫ »»»     ";
+                          " -> [ТЕЛЕМЕТРИЯ]: ДАННЫЕ СТАБИЛЬНЫ »»»             ";
 
-        // 4. МАТЕМАТИКА БЕГУЩЕЙ СТРОКИ
         int textWidth = font.width(dataText);
-        
-        // Ограничиваем зону видимости строки, чтобы она бегала в рамка центра экрана
-        int maxDisplayWidth = 260; 
+        if (textWidth <= 0) return;
+
+        // Настройка ширины окошка бегущей строки по центру экрана
+        int maxDisplayWidth = 200; 
         int startX = screenWidth / 2 - maxDisplayWidth / 2;
 
-        // Рассчитываем смещение на основе тиков игры (скорость движения)
-        // Меняйте число 2, чтобы ускорить или замедлить строку (чем больше, тем медленнее)
-        int speed = 2; 
-        int shift = (int) ((gameTime * speed) % textWidth);
+        // Математика сдвига строки: скорость регулируется числом 2 (меньше — быстрее)
+        int shift = (int) ((gameTime * 2) % textWidth);
 
-        // Включаем scissor (ножницы графического движка), чтобы текст не вылезал за границы центра экрана
-        graphics.enableScissor(startX, y + 12, startX + maxDisplayWidth, y + 25);
+        // Безопасный метод обрезки под Forge 47.4.22
+        graphics.enableScissor(startX, y + 12, startX + maxDisplayWidth, y + 24);
 
-        // Рисуем основной текст со смещением влево
+        // Рисуем основной плывущий текст
         graphics.drawString(font, dataText, startX - shift, y + 12, textColor, false);
         
-        // Рисуем дубликат следом, чтобы строка шла бесконечным бесшовным потоком
+        // Рисуем дубликат следом, чтобы получилась бесконечная бесшовная лента новостей
         graphics.drawString(font, dataText, startX - shift + textWidth, y + 12, textColor, false);
 
-        // Выключаем ограничения графики
         graphics.disableScissor();
     }
 }

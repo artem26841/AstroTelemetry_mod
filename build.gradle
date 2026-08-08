@@ -1,0 +1,54 @@
+plugins {
+    id 'eclipse'
+    id 'idea'
+    id 'net.minecraftforge.gradle' version '[6.0.24,6.2)'
+}
+
+version = '1.0.0'
+group = 'com.science.astrotelemetry'
+archivesBaseName = 'astrotelemetry'
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+minecraft {
+    mappings channel: 'official', version: '1.20.1'
+    copyIdeResources = true
+
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            property 'forge.enabledGameTestNamespaces', 'astrotelemetry'
+        }
+    }
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+repositories {
+    maven { name = "MinecraftForge"; url = "https://minecraftforge.net" }
+}
+
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.20.1-47.4.0'
+}
+
+tasks.named('jar', Jar) {
+    manifest {
+        attributes([
+            "Specification-Title"     : "astrotelemetry",
+            "Specification-Vendor"    : "ScienceModder",
+            "Specification-Version"   : "1",
+            "Implementation-Title"    : project.name,
+            "Implementation-Version"  : project.version,
+            "Implementation-Vendor"   : "ScienceModder",
+            "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+    finalizedBy 'reobfJar'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

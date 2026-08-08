@@ -4,16 +4,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = AstroTelemetry.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class TelemetryHud {
 
-    @SubscribeEvent
     public static void onRenderGui(RenderGuiOverlayEvent.Post event) {
         if (event == null || event.getOverlay() == null || event.getOverlay().id() == null) return;
 
@@ -22,13 +17,10 @@ public class TelemetryHud {
             if (mc == null || mc.level == null || mc.player == null || mc.font == null || event.getGuiGraphics() == null) return;
 
             Player player = mc.player;
-            double pX = player.getX();
-            double pZ = player.getZ();
-
             if (ZoneManager.getZones() != null) {
                 for (TelemetryZone zone : ZoneManager.getZones()) {
-                    if (zone != null && zone.isPlayerInside(pX, pZ)) {
-                        renderComputerData(event.getGuiGraphics(), mc.font, zone, player);
+                    if (zone != null && zone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {
+                        renderTickerData(event.getGuiGraphics(), mc.font, zone, player);
                         break;
                     }
                 }
@@ -36,22 +28,53 @@ public class TelemetryHud {
         }
     }
 
-    private static void renderComputerData(GuiGraphics graphics, Font font, TelemetryZone zone, Player player) {
+    private static void renderTickerData(GuiGraphics graphics, Font font, TelemetryZone zone, Player player) {
         int screenWidth = graphics.guiWidth();
         int screenHeight = graphics.guiHeight();
 
-        int x = screenWidth / 2 + 95;
-        int y = screenHeight - 45; 
-        int textColor = 0xFF00FF00; 
+        long gameTime = player.level().getGameTime();
+        int textColor = 0xFF00FF00; // Яркий зеленый матричный цвет
 
-        double noise = (player.level().getGameTime() % 20 == 0) ? Math.random() * 0.05 : 0.01;
-        double currentFreq = zone.getFrequency() + noise;
+        // 1. Позиция по вертикали: над инвентарем
+        int y = screenHeight - 55; 
 
-        // ИСПРАВЛЕНО: Использование строго совместимого метода drawString для Forge 47.4.22
-        graphics.drawString(font, "== BORT-COMPUTER V1.0 ==", x, y, textColor, false);
-        graphics.drawString(font, "ZONE: " + zone.getName().toUpperCase(), x, y + 10, textColor, false);
-        graphics.drawString(font, "FREQ: " + String.format("%.4f", currentFreq) + " MHz", x, y + 20, textColor, false);
-        graphics.drawString(font, "TYPE: " + zone.getSatelliteType(), x, y + 30, textColor, false);
-        graphics.drawString(font, "SIGNAL: CONNECTED...", x, y + 40, textColor, false);
+        // 2. ОТРИСОВКА СТАТИЧНОЙ СТРОКИ 1 (Название терминала)
+        String titleText = "[ ЦВМ БОРТ-КОМПЬЮТЕР V1.2 ]";
+        int titleX = screenWidth / 2 - font.width(titleText) / 2;
+        graphics.drawString(font, titleText, titleX, y, textColor, false);
+
+        // 3. СБОР ДАННЫХ ДЛЯ СТРОКИ 2 (Бегущая строка)
+        double noise = (gameTime % 20 == 0) ? Math.random() * 0.02 : 0.005;
+        int rainPercent = (int)(player.level().getRainLevel(1.0F) * 100);
+        
+        String dataText = " »»» [СТАТУС]: СЕТЬ ПОДКЛЮЧЕНА -> [ОБЪЕКТ]: " + zone.getName().toUpperCase() + 
+                          " -> [ВЫСОТА]: " + String.format("%.1f", player.getY()) + "м" +
+                          " -> [ЧАСТОТА]: " + String.format("%.4f", 1420.4 + noise) + " MHz" +
+                          " -> [ПОГОДА]: ИСКАЖЕНИЕ " + rainPercent + "%" +
+                          " -> [ТЕЛЕМЕТРИЯ]: ДАННЫЕ СТАБИЛЬНЫ »»»     ";
+
+        // 4. МАТЕМАТИКА БЕГУЩЕЙ СТРОКИ
+        int textWidth = font.width(dataText);
+        
+        // Ограничиваем зону видимости строки, чтобы она бегала в рамка центра экрана
+        int maxDisplayWidth = 260; 
+        int startX = screenWidth / 2 - maxDisplayWidth / 2;
+
+        // Рассчитываем смещение на основе тиков игры (скорость движения)
+        // Меняйте число 2, чтобы ускорить или замедлить строку (чем больше, тем медленнее)
+        int speed = 2; 
+        int shift = (int) ((gameTime * speed) % textWidth);
+
+        // Включаем scissor (ножницы графического движка), чтобы текст не вылезал за границы центра экрана
+        graphics.enableScissor(startX, y + 12, startX + maxDisplayWidth, y + 25);
+
+        // Рисуем основной текст со смещением влево
+        graphics.drawString(font, dataText, startX - shift, y + 12, textColor, false);
+        
+        // Рисуем дубликат следом, чтобы строка шла бесконечным бесшовным потоком
+        graphics.drawString(font, dataText, startX - shift + textWidth, y + 12, textColor, false);
+
+        // Выключаем ограничения графики
+        graphics.disableScissor();
     }
 }

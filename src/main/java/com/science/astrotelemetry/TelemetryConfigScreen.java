@@ -39,7 +39,6 @@ public class TelemetryConfigScreen extends Screen {
         this.radiusField.setValue("6"); 
         this.addWidget(this.radiusField);
 
-        // Обновленный билдер кнопок под Forge 47.4.22
         Button saveButton = Button.builder(Component.literal("Добавить Зону"), (button) -> {
             try {
                 String name = this.nameField.getValue();
@@ -59,7 +58,6 @@ public class TelemetryConfigScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        // ИСПРАВЛЕНО: Новый безопасный рендеринг затемнения экрана в Forge 47.4.22
         if (this.minecraft != null && this.minecraft.level != null) {
             graphics.fillGradient(0, 0, this.width, this.height, 0xD0101010, 0xD0101010);
         }
@@ -67,12 +65,16 @@ public class TelemetryConfigScreen extends Screen {
         int pX = this.width / 2;
         int pY = this.height / 2;
 
-        if (this.nameField != null) this.nameField.render(graphics, mouseX, mouseY, partialTick);
-        if (this.xField != null) this.xField.render(graphics, mouseX, mouseY, partialTick);
-        if (this.zField != null) this.zField.render(graphics, mouseX, mouseY, partialTick);
-        if (this.radiusField != null) this.radiusField.render(graphics, mouseX, mouseY, partialTick);
+        // ИСПРАВЛЕНО: Безопасный рендеринг виджетов ввода данных
+        if (this.nameField != null) this.nameField.renderWidget(graphics, mouseX, mouseY, partialTick);
+        if (this.xField != null) this.xField.renderWidget(graphics, mouseX, mouseY, partialTick);
+        if (this.zField != null) this.zField.renderWidget(graphics, mouseX, mouseY, partialTick);
+        if (this.radiusField != null) this.radiusField.renderWidget(graphics, mouseX, mouseY, partialTick);
 
-        graphics.drawCenteredString(this.font, "НАСТРОЙКА СПУТНИКОВОЙ СЕТИ", pX, pY - 80, 0xFFFFFF);
+        // ИСПРАВЛЕНО: Безопасный метод отрисовки текста без конфликтов с маппингами Forge 47.4.22
+        String titleText = "НАСТРОЙКА СПУТНИКОВОЙ СЕТИ";
+        int textWidth = this.font.width(titleText);
+        graphics.drawString(this.font, titleText, pX - (textWidth / 2), pY - 80, 0xFFFFFF, false);
         
         super.render(graphics, mouseX, mouseY, partialTick);
     }

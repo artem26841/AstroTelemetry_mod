@@ -15,21 +15,21 @@ public class TelemetryHud {
 
     @SubscribeEvent
     public static void onRenderGui(RenderGuiOverlayEvent.Post event) {
-        // Отрисовываем только поверх стандартного HUD элементов игрока (хотбара)
+        if (event == null || event.getOverlay() == null || event.getOverlay().id() == null) return;
+
         if (event.getOverlay().id().equals(VanillaGuiOverlay.HOTBAR.id())) {
             Minecraft mc = Minecraft.getInstance();
+            if (mc == null || mc.level == null || mc.player == null || mc.font == null || event.getGuiGraphics() == null) return;
+
             Player player = mc.player;
+            double pX = player.getX();
+            double pZ = player.getZ();
 
-            // Если игрок в игре и мир загружен
-            if (player != null) {
-                double pX = player.getX();
-                double pZ = player.getZ();
-
-                // Проверяем, находится ли игрок в какой-либо научной зоне
+            if (ZoneManager.getZones() != null) {
                 for (TelemetryZone zone : ZoneManager.getZones()) {
-                    if (zone.isPlayerInside(pX, pZ)) {
+                    if (zone != null && zone.isPlayerInside(pX, pZ)) {
                         renderComputerData(event.getGuiGraphics(), mc.font, zone, player);
-                        break; // Выводим данные только одной зоны за раз
+                        break;
                     }
                 }
             }
@@ -40,20 +40,14 @@ public class TelemetryHud {
         int screenWidth = graphics.guiWidth();
         int screenHeight = graphics.guiHeight();
 
-        // Позиция: Справа от панели инвентаря (Hotbar)
-        // Центр экрана по горизонтали + 95 пикселей (инвентарь заканчивается примерно на +91)
         int x = screenWidth / 2 + 95;
-        // Позиция по вертикали: чуть выше самого низа экрана
         int y = screenHeight - 45; 
-
-        // Зеленый "матричный" цвет для текста компьютера (в формате ARGB)
         int textColor = 0xFF00FF00; 
 
-        // Имитируем шумы спутника, зависящие от времени мира (чтобы цифры немного "прыгали")
         double noise = (player.level().getGameTime() % 20 == 0) ? Math.random() * 0.05 : 0.01;
         double currentFreq = zone.getFrequency() + noise;
 
-        // Рисуем строки данных бортового компьютера
+        // ИСПРАВЛЕНО: Использование строго совместимого метода drawString для Forge 47.4.22
         graphics.drawString(font, "== BORT-COMPUTER V1.0 ==", x, y, textColor, false);
         graphics.drawString(font, "ZONE: " + zone.getName().toUpperCase(), x, y + 10, textColor, false);
         graphics.drawString(font, "FREQ: " + String.format("%.4f", currentFreq) + " MHz", x, y + 20, textColor, false);

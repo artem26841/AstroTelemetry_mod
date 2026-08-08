@@ -27,6 +27,7 @@ public class TelemetryZone {
     public void setX(double x) { this.x = x; }
     public void setZ(double z) { this.z = z; }
     public void setMinY(double minY) { this.minY = minY; }
+    public void setRadius(double radius) { this.radius = radius; }
 
     public String getName() { return name; }
     public double getX() { return x; }

@@ -17,12 +17,16 @@ public class TelemetryZone {
         this.maxHeight = maxHeight;
     }
 
+    // ИСПРАВЛЕНО: Теперь зона — это идеальный четкий квадрат, углы больше не сглаживаются!
     public boolean isPlayerInside(double playerX, double playerY, double playerZ) {
         if (playerY < this.y || playerY > this.maxHeight) return false; 
         
-        double dx = playerX - this.x;
-        double dz = playerZ - this.z;
-        return (dx * dx + dz * dz) <= (radius * radius);
+        // Берем абсолютное расстояние (модуль числа) от игрока до центра по осям X и Z
+        double distanceX = Math.abs(playerX - this.x);
+        double distanceZ = Math.abs(playerZ - this.z);
+        
+        // Сигнал ловит, если игрок не вышел за границы квадрата в любую из сторон
+        return distanceX <= this.radius && distanceZ <= this.radius;
     }
 
     public void setX(double x) { this.x = x; }

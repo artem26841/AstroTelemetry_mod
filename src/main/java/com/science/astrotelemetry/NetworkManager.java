@@ -24,7 +24,7 @@ public class NetworkManager {
     }
 
     @SubscribeEvent
-    public static void onChatReceived(ClientChatReceivedEvent.Post event) {
+    public static void onChatReceived(net.minecraftforge.client.event.ClientChatReceivedEvent event) {
         String message = event.getMessage().getString();
 
         if (message.contains("#AstroData") && message.contains("artem26841")) {

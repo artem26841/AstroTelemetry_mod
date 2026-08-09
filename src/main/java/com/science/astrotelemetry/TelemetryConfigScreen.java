@@ -45,7 +45,7 @@ public class TelemetryConfigScreen extends Screen {
         this.radiusField = new EditBox(this.font, pX + 5, pY - 10, 100, 20, Component.literal("Радиус области"));
         this.radiusField.setValue(String.valueOf((int)mainZone.getRadius()));
         this.addWidget(this.radiusField);
-
+     
         Button gpsButton = Button.builder(Component.literal("Привязать к моему GPS"), (button) -> {
             this.xField.setValue(String.valueOf((int)this.minecraft.player.getX()));
             this.yField.setValue(String.valueOf((int)this.minecraft.player.getY()));

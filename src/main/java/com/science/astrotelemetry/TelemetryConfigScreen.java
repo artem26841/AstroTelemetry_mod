@@ -26,7 +26,6 @@ public class TelemetryConfigScreen extends Screen {
 
         TelemetryZone mainZone = ZoneManager.getZones().get(0);
 
-        // Поля ввода координат X, Y, Z в один ряд
         this.xField = new EditBox(this.font, pX - 105, pY - 50, 65, 20, Component.literal("X"));
         this.xField.setValue(String.valueOf((int)mainZone.getX()));
         this.addWidget(this.xField);
@@ -39,24 +38,20 @@ public class TelemetryConfigScreen extends Screen {
         this.zField.setValue(String.valueOf((int)mainZone.getZ()));
         this.addWidget(this.zField);
 
-        // Поле Максимальной высоты
         this.maxHeightField = new EditBox(this.font, pX - 105, pY - 10, 100, 20, Component.literal("Макс. Высота"));
         this.maxHeightField.setValue(String.valueOf((int)mainZone.getMaxHeight()));
         this.addWidget(this.maxHeightField);
 
-        // Поле Радиуса области
         this.radiusField = new EditBox(this.font, pX + 5, pY - 10, 100, 20, Component.literal("Радиус области"));
         this.radiusField.setValue(String.valueOf((int)mainZone.getRadius()));
         this.addWidget(this.radiusField);
 
-        // Кнопка привязки к GPS игрока
         Button gpsButton = Button.builder(Component.literal("Привязать к моему GPS"), (button) -> {
             this.xField.setValue(String.valueOf((int)this.minecraft.player.getX()));
             this.yField.setValue(String.valueOf((int)this.minecraft.player.getY()));
             this.zField.setValue(String.valueOf((int)this.minecraft.player.getZ()));
         }).bounds(pX - 105, pY + 25, 210, 20).build();
 
-        // Кнопка сохранения настроек
         Button saveButton = Button.builder(Component.literal("Применить координаты"), (button) -> {
             try {
                 double x = Double.parseDouble(this.xField.getValue());

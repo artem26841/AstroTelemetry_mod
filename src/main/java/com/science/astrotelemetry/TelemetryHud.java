@@ -1,63 +1,65 @@
 package com.science.astrotelemetry;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.client.event.RenderGuiEvent;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.List;
+public class TelemetryHud {
 
-public class ZoneManager {
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final List<TelemetryZone> zones = new ArrayList<>();
-    private static File configFile;
-
-    public static void init() {
-        File configDir = new File(Minecraft.getInstance().gameDirectory, "config");
-        if (!configDir.exists()) {
-            configDir.mkdirs();
-        }
-        configFile = new File(configDir, "astro_zones.json");
-        loadZones();
-    }
-
-    public static List<TelemetryZone> getZones() {
-        return zones;
-    }
-
-    public static void addZone(TelemetryZone zone) {
-        zones.add(zone);
-        saveZones();
-    }
-
-    public static void saveZones() {
-        try (FileWriter writer = new FileWriter(configFile)) {
-            GSON.toJson(zones, writer);
-        } catch (Exception e) {
-            AstroTelemetry.LOGGER.error("Не удалось сохранить зоны AstroTelemetry!", e);
-        }
-    }
-
-    public static void loadZones() {
-        zones.clear();
-        if (!configFile.exists()) {
-            addZone(new TelemetryZone("Главный Институт", 0.0, 43.0, 0.0, 50.0, 256.0));
-            return;
-        }
-
-        try (FileReader reader = new FileReader(configFile)) {
-            Type listType = new TypeToken<ArrayList<TelemetryZone>>() {}.getType();
-            List<TelemetryZone> loaded = GSON.fromJson(reader, listType);
-            if (loaded != null) {
-                zones.addAll(loaded);
+    public static void onRenderGui(RenderGuiEvent.Post event) {
+        Minecraft mc = Minecraft.getInstance();
+        
+        if (mc != null && mc.level != null && mc.player != null && mc.font != null && mc.screen == null && event.getGuiGraphics() != null) {
+            Player player = mc.player;
+            
+            if (ZoneManager.getZones() != null && !ZoneManager.getZones().isEmpty()) {
+                for (TelemetryZone zone : ZoneManager.getZones()) {
+                    if (zone != null && zone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {
+                        renderTickerData(event.getGuiGraphics(), mc.font, zone, player);
+                        break;
+                    }
+                }
             }
-        } catch (Exception e) {
-            AstroTelemetry.LOGGER.error("Не удалось загрузить зоны AstroTelemetry!", e);
         }
+    }
+
+    private static void renderTickerData(GuiGraphics graphics, Font font, TelemetryZone zone, Player player) {
+        int screenWidth = graphics.guiWidth();
+        int screenHeight = graphics.guiHeight();
+
+        long gameTime = player.level().getGameTime();
+        int textColor = 0xFF00FF00; 
+
+        int y = screenHeight - 65; 
+
+        String titleText = "[ ЦВМ БОРТ-КОМПЬЮТЕР V1.2 ]";
+        int titleX = screenWidth / 2 - font.width(titleText) / 2;
+        graphics.drawString(font, titleText, titleX, y, textColor, false);
+
+        double noise = (gameTime % 20 == 0) ? Math.random() * 0.02 : 0.005;
+        int rainPercent = (int)(player.level().getRainLevel(1.0F) * 100);
+        
+        String dataText = " »»» [СТАТУС]: СЕТЬ ПОДКЛЮЧЕНА -> [ОБЪЕКТ]: " + zone.getName().toUpperCase() + 
+                          " -> [ВЫСОТА]: " + String.format("%.1f", player.getY()) + "м" +
+                          " -> [ЧАСТОТА]: " + String.format("%.4f", 1420.4 + noise) + " MHz" +
+                          " -> [ПОГОДА]: ИСКАЖЕНИЕ " + rainPercent + "%" +
+                          " -> [ТЕЛЕМЕТРИЯ]: ДАННЫЕ СТАБИЛЬНЫ »»»             ";
+
+        int textWidth = font.width(dataText);
+        if (textWidth <= 0) return;
+
+        int maxDisplayWidth = 220; 
+        int startX = screenWidth / 2 - maxDisplayWidth / 2;
+
+        int shift = (int) ((gameTime * 2) % textWidth);
+
+        graphics.enableScissor(startX, y + 12, startX + maxDisplayWidth, y + 24);
+
+        graphics.drawString(font, dataText, startX - shift, y + 12, textColor, false);
+        graphics.drawString(font, dataText, startX - shift + textWidth, y + 12, textColor, false);
+
+        graphics.disableScissor();
     }
 }

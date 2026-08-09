@@ -1,5 +1,7 @@
 package com.science.astrotelemetry;
 
+import net.minecraft.util.Mth;
+
 public class TelemetryZone {
     private String name;
     private double x;
@@ -17,16 +19,19 @@ public class TelemetryZone {
         this.maxHeight = maxHeight;
     }
 
-    // ИСПРАВЛЕНО: Теперь зона — это идеальный четкий квадрат, углы больше не сглаживаются!
+    // ИСПРАВЛЕНО: Приведение к целым блокам под ногами для идеальной геометрии квадрата!
     public boolean isPlayerInside(double playerX, double playerY, double playerZ) {
-        if (playerY < this.y || playerY > this.maxHeight) return false; 
+        int pY = Mth.floor(playerY);
+        if (pY < (int)this.y || pY > (int)this.maxHeight) return false; 
         
-        // Берем абсолютное расстояние (модуль числа) от игрока до центра по осям X и Z
-        double distanceX = Math.abs(playerX - this.x);
-        double distanceZ = Math.abs(playerZ - this.z);
+        int pX = Mth.floor(playerX);
+        int pZ = Mth.floor(playerZ);
+
+        // Расчет расстояния строго по квадратной сетке блоков (углы больше не срезаются)
+        int distanceX = Math.abs(pX - (int)this.x);
+        int distanceZ = Math.abs(pZ - (int)this.z);
         
-        // Сигнал ловит, если игрок не вышел за границы квадрата в любую из сторон
-        return distanceX <= this.radius && distanceZ <= this.radius;
+        return distanceX <= (int)this.radius && distanceZ <= (int)this.radius;
     }
 
     public void setX(double x) { this.x = x; }

@@ -19,17 +19,22 @@ public class TelemetryZone {
         this.maxHeight = maxHeight;
     }
 
-    // ИСПРАВЛЕНО: Приведение к целым блокам под ногами для идеальной геометрии квадрата!
+    // ИСПРАВЛЕНО: Центр зоны тоже округляется через Mth.floor, убирая сдвиг на 1 блок!
     public boolean isPlayerInside(double playerX, double playerY, double playerZ) {
         int pY = Mth.floor(playerY);
-        if (pY < (int)this.y || pY > (int)this.maxHeight) return false; 
+        if (pY < Mth.floor(this.y) || pY > Mth.floor(this.maxHeight)) return false; 
         
+        // Округляем координаты игрока до конкретного целого блока
         int pX = Mth.floor(playerX);
         int pZ = Mth.floor(playerZ);
 
-        // Расчет расстояния строго по квадратной сетке блоков (углы больше не срезаются)
-        int distanceX = Math.abs(pX - (int)this.x);
-        int distanceZ = Math.abs(pZ - (int)this.z);
+        // Округляем координаты центра зоны по той же логике, чтобы убрать перекос осей
+        int centerX = Mth.floor(this.x);
+        int centerZ = Mth.floor(this.z);
+
+        // Считаем абсолютно точное расстояние между блоками
+        int distanceX = Math.abs(pX - centerX);
+        int distanceZ = Math.abs(pZ - centerZ);
         
         return distanceX <= (int)this.radius && distanceZ <= (int)this.radius;
     }

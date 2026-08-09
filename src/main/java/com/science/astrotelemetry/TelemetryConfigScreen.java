@@ -47,9 +47,9 @@ public class TelemetryConfigScreen extends Screen {
         this.addWidget(this.radiusField);
      
         Button gpsButton = Button.builder(Component.literal("Привязать к моему GPS"), (button) -> {
-            this.xField.setValue(String.valueOf((int)this.minecraft.player.getX()));
-            this.yField.setValue(String.valueOf((int)this.minecraft.player.getY()));
-            this.zField.setValue(String.valueOf((int)this.minecraft.player.getZ()));
+            this.xField.setValue(String.valueOf(net.minecraft.util.Mth.floor(this.minecraft.player.getX())));
+            this.yField.setValue(String.valueOf(net.minecraft.util.Mth.floor(this.minecraft.player.getY())));
+            this.zField.setValue(String.valueOf(net.minecraft.util.Mth.floor(this.minecraft.player.getZ())));
         }).bounds(pX - 105, pY + 25, 210, 20).build();
 
         Button saveButton = Button.builder(Component.literal("Применить координаты"), (button) -> {

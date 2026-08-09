@@ -17,7 +17,6 @@ public class ZoneManager {
     private static final List<TelemetryZone> zones = new ArrayList<>();
     private static File configFile;
 
-    // Инициализация файла конфигурации
     public static void init() {
         File configDir = new File(Minecraft.getInstance().gameDirectory, "config");
         if (!configDir.exists()) {
@@ -31,13 +30,11 @@ public class ZoneManager {
         return zones;
     }
 
-    // Добавление новой зоны и автоматическое сохранение
     public static void addZone(TelemetryZone zone) {
         zones.add(zone);
         saveZones();
     }
 
-    // Сохранение списка зон в JSON
     public static void saveZones() {
         try (FileWriter writer = new FileWriter(configFile)) {
             GSON.toJson(zones, writer);
@@ -46,12 +43,10 @@ public class ZoneManager {
         }
     }
 
-    // Загрузка списка зон из JSON
     public static void loadZones() {
         zones.clear();
         if (!configFile.exists()) {
-            // ИСПРАВЛЕНО: имя, X, Z, радиус (6), минимальная высота Y (по умолчанию 60)
-            addZone(new TelemetryZone("Главный Институт", 0, 0, 0, 50.0, 256.0));
+            addZone(new TelemetryZone("Главный Институт", 0.0, 43.0, 0.0, 50.0, 256.0));
             return;
         }
 

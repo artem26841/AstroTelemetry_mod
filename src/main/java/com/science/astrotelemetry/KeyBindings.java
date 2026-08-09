@@ -25,7 +25,7 @@ public class KeyBindings {
             while (configKey != null && configKey.consumeClick()) {
                 Minecraft mc = Minecraft.getInstance();
                 if (mc.player != null && mc.screen == null) {
-                    mc.setScreen(new TelemetryConfigScreen());
+                    mc.setScreen(new TelemetryHubScreen());
                 }
             }
         }

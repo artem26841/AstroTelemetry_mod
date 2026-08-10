@@ -122,9 +122,9 @@ public class TelemetryHud {
 
         double freqNoise = (gameTime % 20 == 0) ? Math.random() * 0.001 : 0.003;
 
-        String dataText = " »»» [СТАТУС] = Сеть подключена -> [GPS] = Опсерватория Ass -> " +
-                          "[Частота] = " + String.format("%.4f", 1420.405 + freqNoise) + " MHz -> [Погода] = " + weatherStr + " -> " +
-                          "[Помехи] = " + cachedNoise + "% -> [Стабильность сети тарелок] = 100% -> " +
+        String dataText = " »»» [СТАТУС] = Сеть подключена »»» [GPS] = Опсерватория Ass »»» " +
+                          "[Частота] = " + String.format("%.4f", 1420.405 + freqNoise) + " MHz »»» [Погода] = " + weatherStr + " »»» " +
+                          "[Помехи] = " + cachedNoise + "% »»» [Стабильность сети тарелок] = 100% »»» " +
                           "[Активность тарелок] = 12/12 »»»             ";
 
         renderScrollingText(graphics, font, dataText, screenWidth, y + 12, gameTime, textColor);
@@ -148,8 +148,8 @@ public class TelemetryHud {
         graphics.drawString(font, frameText, screenWidth / 2 - font.width(frameText) / 2, y + 12, textColor, false);
 
         double noise = (gameTime % 20 == 0) ? Math.random() * 0.05 : 0.01;
-        String dataText = " »»» Статус = Сеть Подключена -> Частота = " + String.format("%.3f", 1665.2 + noise) + " MHz -> " +
-                          "Эффективность = 97.4% -> Искажения = 2% »»»             ";
+        String dataText = " »»» Статус = Сеть Подключена »»» Частота = " + String.format("%.3f", 1665.2 + noise) + " MHz »»» " +
+                          "Эффективность = 97.4% »»» Искажения = 2% »»»             ";
 
         renderScrollingText(graphics, font, dataText, screenWidth, y + 24, gameTime, textColor);
     }

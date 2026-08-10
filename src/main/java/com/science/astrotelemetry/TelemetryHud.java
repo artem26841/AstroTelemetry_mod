@@ -12,8 +12,6 @@ public class TelemetryHud {
     private static int cachedNoise = 0;
     private static long lastNoiseTick = -1;
     private static int lastFrameIndex = -1;
-
-    // Таймер для цикличного повторения звука оборудования в 3D пространстве
     private static long lastAmbientSoundTick = 0;
 
     public static void onRenderGui(RenderGuiEvent.Post event) {
@@ -22,40 +20,38 @@ public class TelemetryHud {
             Player player = mc.player;
 
             if (ZoneManager.getZones() != null && !ZoneManager.getZones().isEmpty()) {
+                
+                // ИСПРАВЛЕНО: 3D звук работает строго для Зоны 0 (ГСОИ)
+                TelemetryZone gsoiZone = ZoneManager.getZones().get(0);
+                if (gsoiZone != null) {
+                    double dx = player.getX() - gsoiZone.getX();
+                    double dz = player.getZ() - gsoiZone.getZ();
+                    double distanceSq = dx * dx + dz * dz;
+
+                    // ИСПРАВЛЕНО: Дальность считывается динамически из поля soundRange
+                    double allowedRange = gsoiZone.getSoundRange();
+                    if (distanceSq <= allowedRange * allowedRange) {
+                        long gameTime = mc.level.getGameTime();
+                        
+                        // Повторяем звук каждые 4 секунды (80 тиков) по кругу
+                        if (gameTime - lastAmbientSoundTick >= 80 || gameTime < lastAmbientSoundTick) {
+                            mc.level.playSound(player, gsoiZone.getX(), gsoiZone.getY(), gsoiZone.getZ(), 
+                                AstroSounds.ZONE_ENTER.get(), SoundSource.BLOCKS, 0.7F, 1.0F);
+                            lastAmbientSoundTick = gameTime;
+                        }
+                    }
+                }
+
+                // Логика вывода текста на экран для обеих зон
                 for (int i = 0; i < ZoneManager.getZones().size(); i++) {
                     TelemetryZone zone = ZoneManager.getZones().get(i);
-                    if (zone != null) {
-                        
-                        // ИСПРАВЛЕНО: Проверяем расстояние до центра БЕЗ привязки к HUD.
-                        // Если игрок находится в радиусе слышимости оборудования (например, до 40 блоков)
-                        double dx = player.getX() - zone.getX();
-                        double dz = player.getZ() - zone.getZ();
-                        double distanceSq = dx * dx + dz * dz;
-
-                        if (distanceSq <= 40 * 40) { // 40 блоков - радиус слышимости
-                            long gameTime = mc.level.getGameTime();
-                            
-                            // Каждые 80 тиков (4 секунды) запускаем звук заново, чтобы он шёл по кругу.
-                            // ЕСЛИ ВАШ ЗВУК ДЛИННЕЕ ИЛИ КОРОЧЕ: измените число 80 (20 тиков = 1 секунда)
-                            if (gameTime - lastAmbientSoundTick >= 80 || gameTime < lastAmbientSoundTick) {
-                                
-                                // Воспроизводим звук строго ИЗ КООРДИНАТ ЦЕНТРА ЗОНЫ в 3D!
-                                mc.level.playSound(player, zone.getX(), zone.getY(), zone.getZ(), 
-                                    AstroSounds.ZONE_ENTER.get(), SoundSource.BLOCKS, 0.7F, 1.0F);
-                                
-                                lastAmbientSoundTick = gameTime;
-                            }
+                    if (zone != null && zone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {
+                        if (i == 0) {
+                            renderGSOIZone(event.getGuiGraphics(), mc.font, zone, player);
+                        } else if (i == 1) {
+                            renderUPOIRZone(event.getGuiGraphics(), mc.font, zone, player);
                         }
-
-                        // Логика отрисовки текста (остаётся работать в границах квадрата шерсти)
-                        if (zone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {
-                            if (i == 0) {
-                                renderGSOIZone(event.getGuiGraphics(), mc.font, zone, player);
-                            } else if (i == 1) {
-                                renderUPOIRZone(event.getGuiGraphics(), mc.font, zone, player);
-                            }
-                            break;
-                        }
+                        break;
                     }
                 }
             }
@@ -110,7 +106,6 @@ public class TelemetryHud {
         graphics.drawString(font, titleText, screenWidth / 2 - font.width(titleText) / 2, y, textColor, false);
 
         int frame = (int) ((gameTime / 100) % 4);
-        
         if (frame != lastFrameIndex) {
             lastFrameIndex = frame;
         }

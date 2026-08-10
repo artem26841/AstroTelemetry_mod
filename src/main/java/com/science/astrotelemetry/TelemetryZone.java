@@ -9,6 +9,7 @@ public class TelemetryZone {
     private double z;
     private double radius;
     private double maxHeight; 
+    private double soundRange; // НОВОЕ: Индивидуальная дальность 3D-звука в блоках
 
     public TelemetryZone(String name, double x, double y, double z, double radius, double maxHeight) {
         this.name = name;
@@ -17,24 +18,18 @@ public class TelemetryZone {
         this.z = z;
         this.radius = radius;
         this.maxHeight = maxHeight;
+        this.soundRange = 16.0; // По умолчанию дальность звука равна 16 блокам
     }
 
-    // ИСПРАВЛЕНО: Центр зоны тоже округляется через Mth.floor, убирая сдвиг на 1 блок!
     public boolean isPlayerInside(double playerX, double playerY, double playerZ) {
         int pY = Mth.floor(playerY);
         if (pY < Mth.floor(this.y) || pY > Mth.floor(this.maxHeight)) return false; 
         
-        // Округляем координаты игрока до конкретного целого блока
         int pX = Mth.floor(playerX);
         int pZ = Mth.floor(playerZ);
 
-        // Округляем координаты центра зоны по той же логике, чтобы убрать перекос осей
-        int centerX = Mth.floor(this.x);
-        int centerZ = Mth.floor(this.z);
-
-        // Считаем абсолютно точное расстояние между блоками
-        int distanceX = Math.abs(pX - centerX);
-        int distanceZ = Math.abs(pZ - centerZ);
+        int distanceX = Math.abs(pX - Mth.floor(this.x));
+        int distanceZ = Math.abs(pZ - Mth.floor(this.z));
         
         return distanceX <= (int)this.radius && distanceZ <= (int)this.radius;
     }
@@ -44,6 +39,7 @@ public class TelemetryZone {
     public void setZ(double z) { this.z = z; }
     public void setRadius(double radius) { this.radius = radius; }
     public void setMaxHeight(double maxHeight) { this.maxHeight = maxHeight; }
+    public void setSoundRange(double soundRange) { this.soundRange = soundRange; } // НОВОЕ
 
     public String getName() { return name; }
     public double getX() { return x; }
@@ -51,4 +47,5 @@ public class TelemetryZone {
     public double getZ() { return z; }
     public double getRadius() { return radius; }
     public double getMaxHeight() { return maxHeight; }
+    public double getSoundRange() { return soundRange; } // НОВОЕ
 }

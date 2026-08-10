@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -54,12 +55,18 @@ public class TelemetryHud {
                             finalVolume *= 0.2F;
                         }
 
-                        // УЛЬТРА-СОВМЕСТИМЫЙ МЕТОД СОЗДАНИЯ 3D-ЗВУКА ДЛЯ FORGE 47.4.22
-                        // Он сам проставит нужные позиции без вызова ломающих LINEAR классов
-                        currentAmbientSound = SimpleSoundInstance.forAmbientAddition(
-                            AstroSounds.ZONE_ENTER.get(), 
-                            (double) finalVolume, 
-                            1.0
+                        // ИСПРАВЛЕНО: Родной конструктор Майнкрафта 1.20.1 со стандартным перечислением SoundInstance.Position
+                        currentAmbientSound = new SimpleSoundInstance(
+                            AstroSounds.ZONE_ENTER.get().getLocation(),
+                            SoundSource.BLOCKS,
+                            finalVolume,
+                            1.0F,
+                            false,
+                            0,
+                            SoundInstance.Position.LINEAR,
+                            gsoiZone.getX() + 0.5,
+                            gsoiZone.getY() + 0.5,
+                            gsoiZone.getZ() + 0.5
                         );
 
                         mc.getSoundManager().play(currentAmbientSound);

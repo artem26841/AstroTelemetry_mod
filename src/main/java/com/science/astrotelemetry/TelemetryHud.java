@@ -11,38 +11,54 @@ import net.minecraftforge.client.event.RenderGuiEvent;
 public class TelemetryHud {
     private static int cachedNoise = 0;
     private static long lastNoiseTick = -1;
-
-    private static int lastZoneIndex = -1; 
     private static int lastFrameIndex = -1;
+
+    // Таймер для цикличного повторения звука оборудования в 3D пространстве
+    private static long lastAmbientSoundTick = 0;
 
     public static void onRenderGui(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.level != null && mc.player != null && mc.font != null && mc.screen == null && event.getGuiGraphics() != null) {
             Player player = mc.player;
-            int currentZoneIndex = -1;
 
             if (ZoneManager.getZones() != null && !ZoneManager.getZones().isEmpty()) {
                 for (int i = 0; i < ZoneManager.getZones().size(); i++) {
                     TelemetryZone zone = ZoneManager.getZones().get(i);
-                    if (zone != null && zone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {
-                        currentZoneIndex = i;
+                    if (zone != null) {
                         
-                        // ИСПРАВЛЕНО: При входе в любую зону играет НАШ СОБСТВЕННЫЙ звук из Гитхаба!
-                        if (lastZoneIndex == -1) {
-                            mc.level.playSound(player, player.getX(), player.getY(), player.getZ(), 
-                                AstroSounds.ZONE_ENTER.get(), SoundSource.MASTER, 0.7F, 1.0F);
+                        // ИСПРАВЛЕНО: Проверяем расстояние до центра БЕЗ привязки к HUD.
+                        // Если игрок находится в радиусе слышимости оборудования (например, до 40 блоков)
+                        double dx = player.getX() - zone.getX();
+                        double dz = player.getZ() - zone.getZ();
+                        double distanceSq = dx * dx + dz * dz;
+
+                        if (distanceSq <= 40 * 40) { // 40 блоков - радиус слышимости
+                            long gameTime = mc.level.getGameTime();
+                            
+                            // Каждые 80 тиков (4 секунды) запускаем звук заново, чтобы он шёл по кругу.
+                            // ЕСЛИ ВАШ ЗВУК ДЛИННЕЕ ИЛИ КОРОЧЕ: измените число 80 (20 тиков = 1 секунда)
+                            if (gameTime - lastAmbientSoundTick >= 80 || gameTime < lastAmbientSoundTick) {
+                                
+                                // Воспроизводим звук строго ИЗ КООРДИНАТ ЦЕНТРА ЗОНЫ в 3D!
+                                mc.level.playSound(player, zone.getX(), zone.getY(), zone.getZ(), 
+                                    AstroSounds.ZONE_ENTER.get(), SoundSource.BLOCKS, 0.7F, 1.0F);
+                                
+                                lastAmbientSoundTick = gameTime;
+                            }
                         }
 
-                        if (i == 0) {
-                            renderGSOIZone(event.getGuiGraphics(), mc.font, zone, player);
-                        } else if (i == 1) {
-                            renderUPOIRZone(event.getGuiGraphics(), mc.font, zone, player);
+                        // Логика отрисовки текста (остаётся работать в границах квадрата шерсти)
+                        if (zone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {
+                            if (i == 0) {
+                                renderGSOIZone(event.getGuiGraphics(), mc.font, zone, player);
+                            } else if (i == 1) {
+                                renderUPOIRZone(event.getGuiGraphics(), mc.font, zone, player);
+                            }
+                            break;
                         }
-                        break;
                     }
                 }
             }
-            lastZoneIndex = currentZoneIndex;
         }
     }
 
@@ -95,12 +111,7 @@ public class TelemetryHud {
 
         int frame = (int) ((gameTime / 100) % 4);
         
-        // ИСПРАВЛЕНО: Каждые 5 секунд при перелистывании кадра УПОИР тоже играет НАШ кастомный звук!
         if (frame != lastFrameIndex) {
-            if (lastFrameIndex != -1) { 
-                player.level().playSound(player, player.getX(), player.getY(), player.getZ(), 
-                    AstroSounds.ZONE_ENTER.get(), SoundSource.MASTER, 0.4F, 1.3F); // Немного повышаем тональность для эффекта клика
-            }
             lastFrameIndex = frame;
         }
 

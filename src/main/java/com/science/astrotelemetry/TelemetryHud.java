@@ -16,8 +16,6 @@ public class TelemetryHud {
     private static int cachedNoise = 0;
     private static long lastNoiseTick = -1;
     private static int lastFrameIndex = -1;
-
-    // Таймер для бесконечного цикличного повторения длинного 16-секундного звука
     private static long lastAmbientSoundTick = 0;
 
     public static void onRenderGui(RenderGuiEvent.Post event) {
@@ -27,22 +25,23 @@ public class TelemetryHud {
 
             if (ZoneManager.getZones() != null && !ZoneManager.getZones().isEmpty()) {
                 
-                // РАБОТАЕМ С ЗОНОЙ 0 (ГСОИ) ДЛЯ БЕСКОНЕЧНОГО ЦИКЛА
+                // Звук первой зоны считывает ЛИЧНЫЕ параметры дальности и громкости игрока
                 TelemetryZone gsoiZone = ZoneManager.getZones().get(0);
-                if (gsoiZone != null) {
+                ZoneManager.PlayerPreset gsoiPreset = ZoneManager.getPreset(0);
+                
+                if (gsoiZone != null && gsoiPreset != null) {
                     double dx = player.getX() - gsoiZone.getX();
                     double dz = player.getZ() - gsoiZone.getZ();
                     double distanceSq = dx * dx + dz * dz;
 
-                    double allowedRange = gsoiZone.getSoundRange();
+                    double allowedRange = gsoiPreset.soundRange; // Пресет игрока
                     if (distanceSq <= allowedRange * allowedRange) {
                         long gameTime = mc.level.getGameTime();
                         
-                        // ИСПРАВЛЕНО: Звук перезапускается строго каждые 320 тиков (ровно 16 секунд!)
                         if (gameTime - lastAmbientSoundTick >= 320 || lastAmbientSoundTick == 0 || gameTime < lastAmbientSoundTick) {
-                            
-                            // Расчет громкости с учетом стен и перекрытий
-                            float volume = 0.7F; // Базовая громкость
+                            float baseVolume = (float) gsoiPreset.soundVolume; // Пресет игрока
+                            if (baseVolume <= 0) baseVolume = 1.0F; 
+                            float finalVolume = 0.7F * baseVolume; 
                             
                             Vec3 playerPos = player.getEyePosition(1.0F);
                             Vec3 zonePos = new Vec3(gsoiZone.getX() + 0.5, gsoiZone.getY() + 0.5, gsoiZone.getZ() + 0.5);
@@ -54,28 +53,29 @@ public class TelemetryHud {
                                 player
                             ));
 
-                            // Если между игроком и центром структуры есть стена или пол/потолок
                             if (rayTrace.getType() == HitResult.Type.BLOCK) {
-                                volume = 0.15F; // Звук становится глухим (в 4.5 раза тише)
+                                finalVolume = finalVolume * 0.2F; 
                             }
 
-                            // Запускаем звук из точных координат центра ГСОИ
                             mc.level.playSound(player, gsoiZone.getX(), gsoiZone.getY(), gsoiZone.getZ(), 
-                                AstroSounds.ZONE_ENTER.get(), SoundSource.BLOCKS, volume, 1.0F);
+                                AstroSounds.ZONE_ENTER.get(), SoundSource.BLOCKS, finalVolume, 1.0F);
                             
                             lastAmbientSoundTick = gameTime;
                         }
                     }
                 }
 
-                // Логика вывода бегущих строк на экран (остается без изменений)
+                // Вывод текста с ЛИЧНЫМ цветом игрока для каждой зоны раздельно
                 for (int i = 0; i < ZoneManager.getZones().size(); i++) {
                     TelemetryZone zone = ZoneManager.getZones().get(i);
                     if (zone != null && zone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {
+                        ZoneManager.PlayerPreset currentPreset = ZoneManager.getPreset(i);
+                        int personalColor = currentPreset != null ? currentPreset.getHexColor() : 0xFF00FF00;
+
                         if (i == 0) {
-                            renderGSOIZone(event.getGuiGraphics(), mc.font, zone, player);
+                            renderGSOIZone(event.getGuiGraphics(), mc.font, zone, player, personalColor);
                         } else if (i == 1) {
-                            renderUPOIRZone(event.getGuiGraphics(), mc.font, zone, player);
+                            renderUPOIRZone(event.getGuiGraphics(), mc.font, zone, player, personalColor);
                         }
                         break;
                     }
@@ -84,11 +84,10 @@ public class TelemetryHud {
         }
     }
 
-    private static void renderGSOIZone(GuiGraphics graphics, Font font, TelemetryZone zone, Player player) {
+    private static void renderGSOIZone(GuiGraphics graphics, Font font, TelemetryZone zone, Player player, int textColor) {
         int screenWidth = graphics.guiWidth();
         int screenHeight = graphics.guiHeight();
         long gameTime = player.level().getGameTime();
-        int textColor = 0xFF00FF00; 
         int y = screenHeight - 65;
 
         String titleText = "[ ГСОИ БОРТ-КОМПЬЮТЕР v-26.84.1 ]";
@@ -118,24 +117,19 @@ public class TelemetryHud {
                           "[Помехи] = " + cachedNoise + "% -> [Стабильность сети тарелок] = 100% -> " +
                           "[Активность тарелок] = 12/12 »»»             ";
 
-        renderScrollingText(graphics, font, dataText, screenWidth, y + 12, gameTime);
+        renderScrollingText(graphics, font, dataText, screenWidth, y + 12, gameTime, textColor);
     }
 
-    private static void renderUPOIRZone(GuiGraphics graphics, Font font, TelemetryZone zone, Player player) {
+    private static void renderUPOIRZone(GuiGraphics graphics, Font font, TelemetryZone zone, Player player, int textColor) {
         int screenWidth = graphics.guiWidth();
         int screenHeight = graphics.guiHeight();
         long gameTime = player.level().getGameTime();
-        int textColor = 0xFF00FF00;
         int y = screenHeight - 75; 
 
         String titleText = "[ ===УПОИР v-1.2.1=== ]";
         graphics.drawString(font, titleText, screenWidth / 2 - font.width(titleText) / 2, y, textColor, false);
 
         int frame = (int) ((gameTime / 100) % 4);
-        if (frame != lastFrameIndex) {
-            lastFrameIndex = frame;
-        }
-
         String frameText = "[СКАНИРОВАНИЕ НЕБА...]";
         if (frame == 1) frameText = "[ОБЪЕКТЫ]: В НЕБЕ НЕ ОБНАРУЖЕНО";
         else if (frame == 2) frameText = "[АНОМАЛИИ]: НЕ ОБНАРУЖЕНО";
@@ -147,10 +141,10 @@ public class TelemetryHud {
         String dataText = " »»» Статус = Сеть Подключена -> Частота = " + String.format("%.3f", 1665.2 + noise) + " MHz -> " +
                           "Эффективность = 97.4% -> Искажения = 2% »»»             ";
 
-        renderScrollingText(graphics, font, dataText, screenWidth, y + 24, gameTime);
+        renderScrollingText(graphics, font, dataText, screenWidth, y + 24, gameTime, textColor);
     }
 
-    private static void renderScrollingText(GuiGraphics graphics, Font font, String text, int screenWidth, int y, long gameTime) {
+    private static void renderScrollingText(GuiGraphics graphics, Font font, String text, int screenWidth, int y, long gameTime, int color) {
         int textWidth = font.width(text);
         if (textWidth <= 0) return;
 
@@ -159,8 +153,8 @@ public class TelemetryHud {
         int shift = (int) ((gameTime * 2) % textWidth);
 
         graphics.enableScissor(startX, y, startX + maxDisplayWidth, y + 12);
-        graphics.drawString(font, text, startX - shift, y, 0xFF00FF00, false);
-        graphics.drawString(font, text, startX - shift + textWidth, y, 0xFF00FF00, false);
+        graphics.drawString(font, text, startX - shift, y, color, false);
+        graphics.drawString(font, text, startX - shift + textWidth, y, color, false);
         graphics.disableScissor();
     }
 }

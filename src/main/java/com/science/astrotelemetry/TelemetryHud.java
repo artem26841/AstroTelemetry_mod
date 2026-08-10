@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -54,7 +55,7 @@ public class TelemetryHud {
                             finalVolume *= 0.2F;
                         }
 
-                        // ИСПРАВЛЕНО: Прямое указание класса позиции звука net.minecraft.client.resources.sounds.SoundInstance.Position.LINEAR
+                        // ИСПРАВЛЕНО: Заменили SoundInstance.Position на правильный SoundInstance.Attenuation
                         currentAmbientSound = new SimpleSoundInstance(
                             AstroSounds.ZONE_ENTER.get().getLocation(),
                             SoundSource.BLOCKS,
@@ -62,7 +63,7 @@ public class TelemetryHud {
                             1.0F,
                             false,
                             0,
-                            net.minecraft.client.resources.sounds.SoundInstance.Position.LINEAR,
+                            SoundInstance.Attenuation.LINEAR,
                             gsoiZone.getX() + 0.5,
                             gsoiZone.getY() + 0.5,
                             gsoiZone.getZ() + 0.5

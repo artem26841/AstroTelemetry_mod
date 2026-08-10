@@ -4,5 +4,17 @@
     "sounds": [
       "astrotelemetry:computer_click"
     ]
-  }
+  },
+  "flowery-sorrytokeepyouwaiting": {
+    "category": "master",
+    "sounds": [
+      "astrotelemetry:flowery-sorrytokeepyouwaiting"
+    ]
+  },
+    "deltarune-jarona": {
+    "category": "master",
+    "sounds": [
+      "astrotelemetry:deltarune-jarona"
+    ]
+  }  
 }

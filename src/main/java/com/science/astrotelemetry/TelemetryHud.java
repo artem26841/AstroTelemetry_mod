@@ -3,10 +3,11 @@ package com.science.astrotelemetry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -16,56 +17,74 @@ public class TelemetryHud {
     private static int cachedNoise = 0;
     private static long lastNoiseTick = -1;
     private static int lastFrameIndex = -1;
+
+    // Переменные для контроля цикличного звука внутри Зоны 1
+    private static SimpleSoundInstance currentAmbientSound = null;
     private static long lastAmbientSoundTick = 0;
+    private static boolean wasInsideGsoi = false;
 
     public static void onRenderGui(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.level != null && mc.player != null && mc.font != null && mc.screen == null && event.getGuiGraphics() != null) {
             Player player = mc.player;
+            boolean isInsideGsoiNow = false;
 
             if (ZoneManager.getZones() != null && !ZoneManager.getZones().isEmpty()) {
                 
-                // Звук первой зоны считывает ЛИЧНЫЕ параметры дальности и громкости игрока
+                // Проверяем Зону 0 (ГСОИ)
                 TelemetryZone gsoiZone = ZoneManager.getZones().get(0);
-                ZoneManager.PlayerPreset gsoiPreset = ZoneManager.getPreset(0);
-                
-                if (gsoiZone != null && gsoiPreset != null) {
-                    double dx = player.getX() - gsoiZone.getX();
-                    double dz = player.getZ() - gsoiZone.getZ();
-                    double distanceSq = dx * dx + dz * dz;
+                if (gsoiZone != null && gsoiZone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {
+                    isInsideGsoiNow = true;
+                    long gameTime = mc.level.getGameTime();
 
-                    double allowedRange = gsoiPreset.soundRange; // Пресет игрока
-                    if (distanceSq <= allowedRange * allowedRange) {
-                        long gameTime = mc.level.getGameTime();
+                    // ИСПРАВЛЕНО: Бесконечный цикл строго на 16 секунд (320 тиков) БЕЗ дублирования при ходьбе
+                    if (!wasInsideGsoi || (gameTime - lastAmbientSoundTick >= 320) || gameTime < lastAmbientSoundTick) {
                         
-                        if (gameTime - lastAmbientSoundTick >= 320 || lastAmbientSoundTick == 0 || gameTime < lastAmbientSoundTick) {
-                            float baseVolume = (float) gsoiPreset.soundVolume; // Пресет игрока
-                            if (baseVolume <= 0) baseVolume = 1.0F; 
-                            float finalVolume = 0.7F * baseVolume; 
-                            
-                            Vec3 playerPos = player.getEyePosition(1.0F);
-                            Vec3 zonePos = new Vec3(gsoiZone.getX() + 0.5, gsoiZone.getY() + 0.5, gsoiZone.getZ() + 0.5);
-                            
-                            BlockHitResult rayTrace = mc.level.clip(new ClipContext(
-                                playerPos, zonePos, 
-                                ClipContext.Block.COLLIDER, 
-                                ClipContext.Fluid.NONE, 
-                                player
-                            ));
-
-                            if (rayTrace.getType() == HitResult.Type.BLOCK) {
-                                finalVolume = finalVolume * 0.2F; 
-                            }
-
-                            mc.level.playSound(player, gsoiZone.getX(), gsoiZone.getY(), gsoiZone.getZ(), 
-                                AstroSounds.ZONE_ENTER.get(), SoundSource.BLOCKS, finalVolume, 1.0F);
-                            
-                            lastAmbientSoundTick = gameTime;
+                        // Если старый звук почему-то остался — принудительно тушим его перед перезапуском
+                        if (currentAmbientSound != null) {
+                            mc.getSoundManager().stop(currentAmbientSound);
                         }
+
+                        // Считаем громкость с учетом стен
+                        ZoneManager.PlayerPreset gsoiPreset = ZoneManager.getPreset(0);
+                        float baseVolume = gsoiPreset != null ? (float) gsoiPreset.soundVolume : 1.0F;
+                        float finalVolume = 0.7F * baseVolume;
+
+                        Vec3 playerPos = player.getEyePosition(1.0F);
+                        Vec3 zonePos = new Vec3(gsoiZone.getX() + 0.5, gsoiZone.getY() + 0.5, gsoiZone.getZ() + 0.5);
+                        BlockHitResult rayTrace = mc.level.clip(new ClipContext(playerPos, zonePos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+                        if (rayTrace.getType() == HitResult.Type.BLOCK) {
+                            finalVolume *= 0.2F;
+                        }
+
+                        // Создаем экземпляр звука, привязанный к центру зоны в 3D пространстве
+                        currentAmbientSound = new SimpleSoundInstance(
+                            AstroSounds.ZONE_ENTER.get().getLocation(),
+                            SoundSource.BLOCKS,
+                            finalVolume,
+                            1.0F,
+                            SimpleSoundInstance.createUnseededRandom(),
+                            false,
+                            0,
+                            SimpleSoundInstance.SoundInstancePosition.LINEAR,
+                            gsoiZone.getX() + 0.5,
+                            gsoiZone.getY() + 0.5,
+                            gsoiZone.getZ() + 0.5
+                        );
+
+                        mc.getSoundManager().play(currentAmbientSound);
+                        lastAmbientSoundTick = gameTime;
                     }
                 }
 
-                // Вывод текста с ЛИЧНЫМ цветом игрока для каждой зоны раздельно
+                // ИСПРАВЛЕНО: Если игрок только что ВЫШЕЛ из зоны — МГНОВЕННО останавливаем звук
+                if (!isInsideGsoiNow && wasInsideGsoi && currentAmbientSound != null) {
+                    mc.getSoundManager().stop(currentAmbientSound);
+                    currentAmbientSound = null;
+                }
+                wasInsideGsoi = isInsideGsoiNow;
+
+                // Рендеринг текста для обеих зон
                 for (int i = 0; i < ZoneManager.getZones().size(); i++) {
                     TelemetryZone zone = ZoneManager.getZones().get(i);
                     if (zone != null && zone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {

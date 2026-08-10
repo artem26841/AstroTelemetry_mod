@@ -67,14 +67,6 @@ public class TelemetryConfigScreen extends Screen {
         this.radiusField.setEditable(isOwner);
         this.addWidget(this.radiusField);
 
-        // ИСПРАВЛЕНО: Личные настройки звука и цвета (ДОСТУПНЫ ВСЕМ ИГРОКАМ!)
-        this.soundRangeField = new EditBox(this.font, pX - 105, pY + 25, 95, 20, Component.literal("Дальность"));
-        this.soundRangeField.setValue(String.valueOf((int)preset.soundRange));
-        this.soundRangeField.setEditable(true); // Открыто для всех!
-        if (this.zoneIndex == 0) {
-            this.addWidget(this.soundRangeField);
-        }
-
         this.colorField = new EditBox(this.font, pX - 105, pY + 65, 210, 20, Component.literal("Цвет текста HEX"));
         this.colorField.setValue(preset.textColor);
         this.colorField.setEditable(true); // Открыто для всех отдельно в каждой зоне!
@@ -124,11 +116,11 @@ public class TelemetryConfigScreen extends Screen {
                     if (!hexInput.startsWith("#")) hexInput = "#" + hexInput;
                     preset.textColor = hexInput;
                 }
-                if (this.zoneIndex == 0 && this.soundRangeField != null) {
-                    preset.soundRange = Double.parseDouble(this.soundRangeField.getValue());
+                
+                if (this.zoneIndex == 0) {
                     preset.soundVolume = this.currentVolumeValue * 5.0;
                 }
-                
+
                 ZoneManager.savePlayerPresets(); // Пишем в личный json игрока
                 this.minecraft.setScreen(this.parentScreen); 
             } catch (NumberFormatException e) {
@@ -156,10 +148,6 @@ public class TelemetryConfigScreen extends Screen {
         if (this.maxHeightField != null) this.maxHeightField.renderWidget(graphics, mouseX, mouseY, partialTick);
         if (this.radiusField != null) this.radiusField.renderWidget(graphics, mouseX, mouseY, partialTick);
         if (this.colorField != null) this.colorField.renderWidget(graphics, mouseX, mouseY, partialTick);
-        
-        if (this.zoneIndex == 0 && this.soundRangeField != null) {
-            this.soundRangeField.renderWidget(graphics, mouseX, mouseY, partialTick);
-        }
 
         String zoneName = this.zoneIndex == 0 ? "ЦВМ ОУС-1 \"ГЛ КОМП\"" : "КОМПЛЕКС \"УПОИР v-1.2.1\"";
         String titleText = "НАСТРОЙКИ СТАНЦИИ: " + zoneName;
@@ -171,7 +159,6 @@ public class TelemetryConfigScreen extends Screen {
         graphics.drawString(this.font, "ЛИЧНЫЙ HEX цвет этой зоны (например, #FF1B18):", pX - 105, pY + 53, 0xAAAAAA, false);
 
         if (this.zoneIndex == 0) {
-            graphics.drawString(this.font, "Дальность (бл):", pX - 105, pY + 13, 0xAAAAAA, false);
             graphics.drawString(this.font, "Мощность звука:", pX + 5, pY + 13, 0xAAAAAA, false);
         }
 

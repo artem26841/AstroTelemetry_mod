@@ -1,0 +1,9 @@
+{
+  "zone_enter": {
+    "category": "master",
+    "subtitle": "subtitles.astrotelemetry.zone_enter",
+    "sounds": [
+      "astrotelemetry:computer_click"
+    ]
+  }
+}

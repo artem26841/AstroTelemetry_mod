@@ -13,45 +13,69 @@ public class TelemetryHud {
     private static long lastNoiseTick = -1;
     private static int lastFrameIndex = -1;
 
-    // Таймер для контроля перезапуска 16-секундного звука
-    private static long lastAmbientSoundTick = 0;
+    // НАШИ НОВЫЕ ТАЙМЕРЫ ДЛЯ ЗАЩИТЫ ОТ НАСЛОЕНИЯ
+    private static long soundTimerTicks = 0; // Оставшееся время действия таймера в тиках
+    private static long lastSystemTick = -1; // Для подсчета прошедшего времени
 
     public static void onRenderGui(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.level != null && mc.player != null && mc.font != null && mc.screen == null && event.getGuiGraphics() != null) {
             Player player = mc.player;
+            long gameTime = mc.level.getGameTime();
+
+            // Логика уменьшения таймера (срабатывает 1 раз за игровой тик Майнкрафта)
+            if (lastSystemTick != -1 && gameTime != lastSystemTick) {
+                if (soundTimerTicks > 0) {
+                    soundTimerTicks--;
+                }
+            }
+            lastSystemTick = gameTime;
 
             if (ZoneManager.getZones() != null && !ZoneManager.getZones().isEmpty()) {
                 
-                // РАБОТАЕМ С ЗОНОЙ 0 (ГСОИ) ДЛЯ КОРРЕКТНОГО ЦИКЛА ЗВУКА
+                // РАБОТАЕМ С ЗОНОЙ 0 (ГСОИ) ДЛЯ ЗВУКОВОГО ТАЙМЕРА
                 TelemetryZone gsoiZone = ZoneManager.getZones().get(0);
                 if (gsoiZone != null) {
                     
-                    // Звук запускается, только если игрок ФИЗИЧЕСКИ находится внутри радиуса зоны ГСОИ
+                    // Проверяем, находится ли игрок внутри квадрата ГСОИ
                     if (gsoiZone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {
-                        long gameTime = mc.level.getGameTime();
-
-                        // Бесконечный цикл на 16 секунд (320 тиков) без наслоений при ходьбе
-                        if (gameTime - lastAmbientSoundTick >= 320 || lastAmbientSoundTick == 0 || gameTime < lastAmbientSoundTick) {
+                        
+                        // ЕСЛИ ТАЙМЕР ЗАКОНЧИЛСЯ (РАВЕН 0) -> ЗАПУСКАЕМ ЗВУК И ТАЙМЕР ЗАПИСЫВАЕМ НА 15.5 СЕКУНД (310 ТИКОВ)
+                        if (soundTimerTicks <= 0) {
                             
-                            // Считываем личную громкость текущего игрока из ползунка в меню
                             ZoneManager.PlayerPreset gsoiPreset = ZoneManager.getPreset(0);
-                            float baseVolume = gsoiPreset != null ? (float) gsoiPreset.soundVolume : 1.0F;
-                            float finalVolume = 0.7F * baseVolume;
-
-                            // Воспроизводим звук через стандартный и безопасный метод мира из центра зоны
-                            mc.level.playSound(player, gsoiZone.getX() + 0.5, gsoiZone.getY() + 0.5, gsoiZone.getZ() + 0.5, 
-                                AstroSounds.ZONE_ENTER.get(), SoundSource.BLOCKS, finalVolume, 1.0F);
+                            float userVolume = gsoiPreset != null ? (float) gsoiPreset.soundVolume : 1.0F;
                             
-                            lastAmbientSoundTick = gameTime;
+                            // Автоматически связываем дальность звука с радиусом области:
+                            // Базовый радиус в майнкрафте равен 16 блокам при громкости 1.0F.
+                            // Мы делим радиус вашей зоны на 16.0, чтобы громкость пропорционально расширяла или сужала 3D-слышимость!
+                            float radiusFactor = (float) (gsoiZone.getRadius() / 16.0);
+                            if (radiusFactor < 0.2F) radiusFactor = 0.2F; // Защита от нулевого радиуса
+                            
+                            float finalVolume = 0.7F * userVolume * radiusFactor;
+
+                            // Спавним чистый 3D-звук строго по координатам центра (зеленой шерсти) без привязки к игроку
+                            mc.level.playLocalSound(
+                                gsoiZone.getX() + 0.5, 
+                                gsoiZone.getY() + 0.5, 
+                                gsoiZone.getZ() + 0.5, 
+                                AstroSounds.ZONE_ENTER.get(), 
+                                SoundSource.BLOCKS, 
+                                finalVolume, 
+                                1.0F, 
+                                false
+                            );
+                            
+                            // Взводим таймер ровно на 15.5 секунд (310 тиков), блокируя повторные запуски
+                            soundTimerTicks = 310; 
                         }
                     } else {
-                        // Если игрок вышел из зоны, сбрасываем таймер, чтобы при следующем заходе звук включился сразу
-                        lastAmbientSoundTick = 0;
+                        // Если в зоне никого нет — таймер сбрасывается в ноль, чтобы при следующем входе звук включился мгновенно
+                        soundTimerTicks = 0;
                     }
                 }
 
-                // Рендеринг текста на экран для обеих зон
+                // Стандартный рендеринг бегущих строк на экран для обеих зон
                 for (int i = 0; i < ZoneManager.getZones().size(); i++) {
                     TelemetryZone zone = ZoneManager.getZones().get(i);
                     if (zone != null && zone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {

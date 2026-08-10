@@ -18,7 +18,7 @@ public class TelemetryHud {
     private static long lastNoiseTick = -1;
     private static int lastFrameIndex = -1;
 
-    // Переменные для контроля цикличного звука внутри Зоны 1
+    // Переменные контроля звука
     private static SimpleSoundInstance currentAmbientSound = null;
     private static long lastAmbientSoundTick = 0;
     private static boolean wasInsideGsoi = false;
@@ -31,21 +31,18 @@ public class TelemetryHud {
 
             if (ZoneManager.getZones() != null && !ZoneManager.getZones().isEmpty()) {
                 
-                // Проверяем Зону 0 (ГСОИ)
                 TelemetryZone gsoiZone = ZoneManager.getZones().get(0);
                 if (gsoiZone != null && gsoiZone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {
                     isInsideGsoiNow = true;
                     long gameTime = mc.level.getGameTime();
 
-                    // ИСПРАВЛЕНО: Бесконечный цикл строго на 16 секунд (320 тиков) БЕЗ дублирования при ходьбе
+                    // Бесконечный цикл на 16 секунд (320 тиков)
                     if (!wasInsideGsoi || (gameTime - lastAmbientSoundTick >= 320) || gameTime < lastAmbientSoundTick) {
                         
-                        // Если старый звук почему-то остался — принудительно тушим его перед перезапуском
                         if (currentAmbientSound != null) {
                             mc.getSoundManager().stop(currentAmbientSound);
                         }
 
-                        // Считаем громкость с учетом стен
                         ZoneManager.PlayerPreset gsoiPreset = ZoneManager.getPreset(0);
                         float baseVolume = gsoiPreset != null ? (float) gsoiPreset.soundVolume : 1.0F;
                         float finalVolume = 0.7F * baseVolume;
@@ -57,13 +54,12 @@ public class TelemetryHud {
                             finalVolume *= 0.2F;
                         }
 
-                        // Создаем экземпляр звука, привязанный к центру зоны в 3D пространстве
+                        // ИСПРАВЛЕНО: Безопасный конструктор 3D звука строго для маппингов Forge 47.4.22
                         currentAmbientSound = new SimpleSoundInstance(
                             AstroSounds.ZONE_ENTER.get().getLocation(),
                             SoundSource.BLOCKS,
                             finalVolume,
                             1.0F,
-                            SimpleSoundInstance.createUnseededRandom(),
                             false,
                             0,
                             SimpleSoundInstance.SoundInstancePosition.LINEAR,
@@ -77,14 +73,13 @@ public class TelemetryHud {
                     }
                 }
 
-                // ИСПРАВЛЕНО: Если игрок только что ВЫШЕЛ из зоны — МГНОВЕННО останавливаем звук
                 if (!isInsideGsoiNow && wasInsideGsoi && currentAmbientSound != null) {
                     mc.getSoundManager().stop(currentAmbientSound);
                     currentAmbientSound = null;
                 }
                 wasInsideGsoi = isInsideGsoiNow;
 
-                // Рендеринг текста для обеих зон
+                // Вывод текста
                 for (int i = 0; i < ZoneManager.getZones().size(); i++) {
                     TelemetryZone zone = ZoneManager.getZones().get(i);
                     if (zone != null && zone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {

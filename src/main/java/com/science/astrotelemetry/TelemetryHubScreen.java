@@ -1,12 +1,9 @@
 package com.science.astrotelemetry;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.client.gui.screens.Screen;
-import com.science.astrotelemetry.NetworkManager;
 
 public class TelemetryHubScreen extends Screen {
 
@@ -22,28 +19,28 @@ public class TelemetryHubScreen extends Screen {
         int pX = this.width / 2;
         int pY = this.height / 2;
 
-        // 1. Кнопка ГЛ КОМП с красивым научным названием (Активна)
+        // Кнопка 1: ГЛ КОМП (Зона 0)
         this.addRenderableWidget(Button.builder(Component.literal("ЦВМ ОУС-1 \"ГЛ КОМП\""), (button) -> {
-            this.minecraft.setScreen(new TelemetryConfigScreen(this));
+            this.minecraft.setScreen(new TelemetryConfigScreen(this, 0));
         }).bounds(pX - 100, pY - 35, 200, 20).build());
 
-        // 2. Две неактивные кнопки будущих зон радиотелескопов (ПУСТО)
-        Button empty1 = Button.builder(Component.literal("РТ-70 \"ПУЛЬСАР\" [НЕТ СИГНАЛА]"), (button) -> {}).bounds(pX - 100, pY - 5, 200, 20).build();
+        // Кнопка 2: УПОИР (Зона 1) -> ТЕПЕРЬ АКТИВНА!
+        this.addRenderableWidget(Button.builder(Component.literal("КОМПЛЕКС \"УПОИР v-1.2.1\""), (button) -> {
+            this.minecraft.setScreen(new TelemetryConfigScreen(this, 1));
+        }).bounds(pX - 100, pY - 5, 200, 20).build());
+
+        // Кнопка 3: ОРТ-32 Квазар (Пока заблокирована)
         Button empty2 = Button.builder(Component.literal("ОРТ-32 \"КВАЗАР\" [НЕТ СИГНАЛА]"), (button) -> {}).bounds(pX - 100, pY + 25, 200, 20).build();
-        
-        empty1.active = false; // Кнопки выключены, на них нельзя кликнуть
         empty2.active = false;
-        
-        this.addRenderableWidget(empty1);
         this.addRenderableWidget(empty2);
 
-        // 3. Кнопка ТРАНСЛИРОВ в левом нижнем углу по вашему эскизу
+        // Кнопка ТРАНСЛИРОВ
         Button transButton = Button.builder(Component.literal("ТРАНСЛИРОВ"), (button) -> {
             NetworkManager.sendTelemetryPacket();
-            this.onClose(); // Закрываем меню после отправки пакета в сеть чата
+            this.onClose();
         }).bounds(15, this.height - 35, 90, 20).build();
         
-        transButton.active = isOwner; // Кнопка отправки пакетов работает ТОЛЬКО у artem26841
+        transButton.active = isOwner;
         this.addRenderableWidget(transButton);
     }
 

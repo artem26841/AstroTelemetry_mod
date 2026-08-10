@@ -3,23 +3,36 @@ package com.science.astrotelemetry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.client.event.RenderGuiEvent;
 
 public class TelemetryHud {
-    // Переменные для фикса быстрого мелькания цифр
     private static int cachedNoise = 0;
     private static long lastNoiseTick = -1;
+
+    private static int lastZoneIndex = -1; 
+    private static int lastFrameIndex = -1;
 
     public static void onRenderGui(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.level != null && mc.player != null && mc.font != null && mc.screen == null && event.getGuiGraphics() != null) {
             Player player = mc.player;
+            int currentZoneIndex = -1;
+
             if (ZoneManager.getZones() != null && !ZoneManager.getZones().isEmpty()) {
                 for (int i = 0; i < ZoneManager.getZones().size(); i++) {
                     TelemetryZone zone = ZoneManager.getZones().get(i);
                     if (zone != null && zone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {
+                        currentZoneIndex = i;
+                        
+                        // ИСПРАВЛЕНО: При входе в любую зону играет НАШ СОБСТВЕННЫЙ звук из Гитхаба!
+                        if (lastZoneIndex == -1) {
+                            mc.level.playSound(player, player.getX(), player.getY(), player.getZ(), 
+                                AstroSounds.ZONE_ENTER.get(), SoundSource.MASTER, 0.7F, 1.0F);
+                        }
+
                         if (i == 0) {
                             renderGSOIZone(event.getGuiGraphics(), mc.font, zone, player);
                         } else if (i == 1) {
@@ -29,6 +42,7 @@ public class TelemetryHud {
                     }
                 }
             }
+            lastZoneIndex = currentZoneIndex;
         }
     }
 
@@ -54,7 +68,6 @@ public class TelemetryHud {
             minNoise = 10; maxNoise = 50;
         }
 
-        // ИСПРАВЛЕНО: Цифры помех обновляются СТРОГО 1 раз в секунду (каждые 20 тиков)
         if (gameTime % 20 == 0 || lastNoiseTick == -1 || gameTime < lastNoiseTick) {
             cachedNoise = minNoise + (int)(Math.random() * ((maxNoise - minNoise) + 1));
             lastNoiseTick = gameTime;
@@ -80,8 +93,17 @@ public class TelemetryHud {
         String titleText = "[ ===УПОИР v-1.2.1=== ]";
         graphics.drawString(font, titleText, screenWidth / 2 - font.width(titleText) / 2, y, textColor, false);
 
-        // Ровно 4 переключающихся кадра (каждые 100 тиков = 5 секунд)
         int frame = (int) ((gameTime / 100) % 4);
+        
+        // ИСПРАВЛЕНО: Каждые 5 секунд при перелистывании кадра УПОИР тоже играет НАШ кастомный звук!
+        if (frame != lastFrameIndex) {
+            if (lastFrameIndex != -1) { 
+                player.level().playSound(player, player.getX(), player.getY(), player.getZ(), 
+                    AstroSounds.ZONE_ENTER.get(), SoundSource.MASTER, 0.4F, 1.3F); // Немного повышаем тональность для эффекта клика
+            }
+            lastFrameIndex = frame;
+        }
+
         String frameText = "[СКАНИРОВАНИЕ НЕБА...]";
         if (frame == 1) frameText = "[ОБЪЕКТЫ]: В НЕБЕ НЕ ОБНАРУЖЕНО";
         else if (frame == 2) frameText = "[АНОМАЛИИ]: НЕ ОБНАРУЖЕНО";

@@ -3,15 +3,9 @@ package com.science.astrotelemetry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.RenderGuiEvent;
 
 public class TelemetryHud {
@@ -19,68 +13,45 @@ public class TelemetryHud {
     private static long lastNoiseTick = -1;
     private static int lastFrameIndex = -1;
 
-    // Переменные контроля звука
-    private static SimpleSoundInstance currentAmbientSound = null;
+    // Таймер для контроля перезапуска 16-секундного звука
     private static long lastAmbientSoundTick = 0;
-    private static boolean wasInsideGsoi = false;
 
     public static void onRenderGui(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.level != null && mc.player != null && mc.font != null && mc.screen == null && event.getGuiGraphics() != null) {
             Player player = mc.player;
-            boolean isInsideGsoiNow = false;
 
             if (ZoneManager.getZones() != null && !ZoneManager.getZones().isEmpty()) {
                 
+                // РАБОТАЕМ С ЗОНОЙ 0 (ГСОИ) ДЛЯ КОРРЕКТНОГО ЦИКЛА ЗВУКА
                 TelemetryZone gsoiZone = ZoneManager.getZones().get(0);
-                if (gsoiZone != null && gsoiZone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {
-                    isInsideGsoiNow = true;
-                    long gameTime = mc.level.getGameTime();
+                if (gsoiZone != null) {
+                    
+                    // Звук запускается, только если игрок ФИЗИЧЕСКИ находится внутри радиуса зоны ГСОИ
+                    if (gsoiZone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {
+                        long gameTime = mc.level.getGameTime();
 
-                    // Бесконечный цикл на 16 секунд (320 тиков)
-                    if (!wasInsideGsoi || (gameTime - lastAmbientSoundTick >= 320) || gameTime < lastAmbientSoundTick) {
-                        
-                        if (currentAmbientSound != null) {
-                            mc.getSoundManager().stop(currentAmbientSound);
+                        // Бесконечный цикл на 16 секунд (320 тиков) без наслоений при ходьбе
+                        if (gameTime - lastAmbientSoundTick >= 320 || lastAmbientSoundTick == 0 || gameTime < lastAmbientSoundTick) {
+                            
+                            // Считываем личную громкость текущего игрока из ползунка в меню
+                            ZoneManager.PlayerPreset gsoiPreset = ZoneManager.getPreset(0);
+                            float baseVolume = gsoiPreset != null ? (float) gsoiPreset.soundVolume : 1.0F;
+                            float finalVolume = 0.7F * baseVolume;
+
+                            // Воспроизводим звук через стандартный и безопасный метод мира из центра зоны
+                            mc.level.playSound(player, gsoiZone.getX() + 0.5, gsoiZone.getY() + 0.5, gsoiZone.getZ() + 0.5, 
+                                AstroSounds.ZONE_ENTER.get(), SoundSource.BLOCKS, finalVolume, 1.0F);
+                            
+                            lastAmbientSoundTick = gameTime;
                         }
-
-                        ZoneManager.PlayerPreset gsoiPreset = ZoneManager.getPreset(0);
-                        float baseVolume = gsoiPreset != null ? (float) gsoiPreset.soundVolume : 1.0F;
-                        float finalVolume = 0.7F * baseVolume;
-
-                        Vec3 playerPos = player.getEyePosition(1.0F);
-                        Vec3 zonePos = new Vec3(gsoiZone.getX() + 0.5, gsoiZone.getY() + 0.5, gsoiZone.getZ() + 0.5);
-                        BlockHitResult rayTrace = mc.level.clip(new ClipContext(playerPos, zonePos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-                        if (rayTrace.getType() == HitResult.Type.BLOCK) {
-                            finalVolume *= 0.2F;
-                        }
-
-                        // ИСПРАВЛЕНО: Заменили SoundInstance.Position на правильный SoundInstance.Attenuation
-                        currentAmbientSound = new SimpleSoundInstance(
-                            AstroSounds.ZONE_ENTER.get().getLocation(),
-                            SoundSource.BLOCKS,
-                            finalVolume,
-                            1.0F,
-                            false,
-                            0,
-                            SoundInstance.Attenuation.LINEAR,
-                            gsoiZone.getX() + 0.5,
-                            gsoiZone.getY() + 0.5,
-                            gsoiZone.getZ() + 0.5
-                        );
-
-                        mc.getSoundManager().play(currentAmbientSound);
-                        lastAmbientSoundTick = gameTime;
+                    } else {
+                        // Если игрок вышел из зоны, сбрасываем таймер, чтобы при следующем заходе звук включился сразу
+                        lastAmbientSoundTick = 0;
                     }
                 }
 
-                if (!isInsideGsoiNow && wasInsideGsoi && currentAmbientSound != null) {
-                    mc.getSoundManager().stop(currentAmbientSound);
-                    currentAmbientSound = null;
-                }
-                wasInsideGsoi = isInsideGsoiNow;
-
-                // Вывод текста
+                // Рендеринг текста на экран для обеих зон
                 for (int i = 0; i < ZoneManager.getZones().size(); i++) {
                     TelemetryZone zone = ZoneManager.getZones().get(i);
                     if (zone != null && zone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {

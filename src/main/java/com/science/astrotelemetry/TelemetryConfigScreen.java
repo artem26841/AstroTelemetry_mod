@@ -14,12 +14,13 @@ public class TelemetryConfigScreen extends Screen {
     private EditBox maxHeightField;
     private EditBox radiusField;
 
-    // Конструктор теперь принимает родительский экран хаба
-    public TelemetryConfigScreen(Screen parentScreen) {
+      private final int zoneIndex;
+    public TelemetryConfigScreen(Screen parentScreen, int zoneIndex) {
         super(Component.literal("Управление Исследовательской Станцией"));
         this.parentScreen = parentScreen;
+        this.zoneIndex = zoneIndex;
     }
-
+    // В методах init() и render() замените .get(0) на .get(this.zoneIndex)
     @Override
     protected void init() {
         if (this.minecraft == null || this.minecraft.player == null) return;

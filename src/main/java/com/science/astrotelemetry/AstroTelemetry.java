@@ -28,7 +28,7 @@ public class AstroTelemetry {
     }
 
     private void doClientSetup(final FMLClientSetupEvent event) {
-        event.enqueueWork(ZoneManager::init);
+        event.enqueueWork(ZoneManager::initForCurrentServerOrWorld);
         LOGGER.info("!!! AstroTelemetry: БАЗА ДАННЫХ ИНИЦИАЛИЗИРОВАНА !!!");
     }
 }

@@ -3,15 +3,22 @@ package com.science.astrotelemetry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.RenderGuiEvent;
 
 public class TelemetryHud {
     private static int cachedNoise = 0;
     private static long lastNoiseTick = -1;
     private static int lastFrameIndex = -1;
+
+    // Таймер для бесконечного цикличного повторения звука
     private static long lastAmbientSoundTick = 0;
 
     public static void onRenderGui(RenderGuiEvent.Post event) {
@@ -21,28 +28,49 @@ public class TelemetryHud {
 
             if (ZoneManager.getZones() != null && !ZoneManager.getZones().isEmpty()) {
                 
-                // ИСПРАВЛЕНО: 3D звук работает строго для Зоны 0 (ГСОИ)
+                // РАБОТАЕМ СВЕРХУ С ЗОНОЙ 0 (ГСОИ) ДЛЯ ЦИКЛИЧНОГО 3D ЗВУКА
                 TelemetryZone gsoiZone = ZoneManager.getZones().get(0);
                 if (gsoiZone != null) {
                     double dx = player.getX() - gsoiZone.getX();
                     double dz = player.getZ() - gsoiZone.getZ();
                     double distanceSq = dx * dx + dz * dz;
 
-                    // ИСПРАВЛЕНО: Дальность считывается динамически из поля soundRange
                     double allowedRange = gsoiZone.getSoundRange();
                     if (distanceSq <= allowedRange * allowedRange) {
                         long gameTime = mc.level.getGameTime();
                         
-                        // Повторяем звук каждые 4 секунды (80 тиков) по кругу
+                        // ИСПРАВЛЕНО: Бесконечный цикл. Когда звук заканчивается (через 4 сек / 80 тиков), он играет заново
                         if (gameTime - lastAmbientSoundTick >= 80 || gameTime < lastAmbientSoundTick) {
+                            
+                            // НОВОЕ: Проверка на наличие стен/пола между игроком и центром зоны
+                            float volume = 0.7F; // Базовая громкость на открытом пространстве
+                            
+                            Vec3 playerPos = player.getEyePosition(1.0F);
+                            Vec3 zonePos = new Vec3(gsoiZone.getX() + 0.5, gsoiZone.getY() + 0.5, gsoiZone.getZ() + 0.5);
+                            
+                            // Пускаем невидимый луч от глаз игрока к центру зоны
+                            BlockHitResult rayTrace = mc.level.clip(new ClipContext(
+                                playerPos, zonePos, 
+                                ClipContext.Block.COLLIDER, 
+                                ClipContext.Fluid.NONE, 
+                                player
+                            ));
+
+                            // Если луч упёрся в блок (стену или пол), глушим звук до 0.15F (в 4.5 раза тише!)
+                            if (rayTrace.getType() == HitResult.Type.BLOCK) {
+                                volume = 0.15F; 
+                            }
+
+                            // Воспроизводим строго ИЗ КООРДИНАТ ЦЕНТРА ЗОНЫ
                             mc.level.playSound(player, gsoiZone.getX(), gsoiZone.getY(), gsoiZone.getZ(), 
-                                AstroSounds.ZONE_ENTER.get(), SoundSource.BLOCKS, 0.7F, 1.0F);
+                                AstroSounds.ZONE_ENTER.get(), SoundSource.BLOCKS, volume, 1.0F);
+                            
                             lastAmbientSoundTick = gameTime;
                         }
                     }
                 }
 
-                // Логика вывода текста на экран для обеих зон
+                // Стандартная логика вывода бегущих строк на экран
                 for (int i = 0; i < ZoneManager.getZones().size(); i++) {
                     TelemetryZone zone = ZoneManager.getZones().get(i);
                     if (zone != null && zone.isPlayerInside(player.getX(), player.getY(), player.getZ())) {

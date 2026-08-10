@@ -4,7 +4,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -55,7 +54,7 @@ public class TelemetryHud {
                             finalVolume *= 0.2F;
                         }
 
-                        // ИСПРАВЛЕНО: Родной конструктор Майнкрафта 1.20.1 со стандартным перечислением SoundInstance.Position
+                        // ИСПРАВЛЕНО: Прямое указание класса позиции звука net.minecraft.client.resources.sounds.SoundInstance.Position.LINEAR
                         currentAmbientSound = new SimpleSoundInstance(
                             AstroSounds.ZONE_ENTER.get().getLocation(),
                             SoundSource.BLOCKS,
@@ -63,7 +62,7 @@ public class TelemetryHud {
                             1.0F,
                             false,
                             0,
-                            SoundInstance.Position.LINEAR,
+                            net.minecraft.client.resources.sounds.SoundInstance.Position.LINEAR,
                             gsoiZone.getX() + 0.5,
                             gsoiZone.getY() + 0.5,
                             gsoiZone.getZ() + 0.5
